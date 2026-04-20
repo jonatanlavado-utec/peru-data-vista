@@ -11,6 +11,7 @@ import {
   LSM_LOG,
   AUTOCOMPLETE_TERMS,
 } from "./data";
+import { getOptimizedFlag } from "./optimized-context";
 import type {
   Product,
   TopProduct,
@@ -59,24 +60,26 @@ export function getProducts(page = 1, pageSize = 12) {
   });
 }
 
-// GET /api/search?q=
+// GET /api/search?q=&optimized=
 export function searchProducts(q: string) {
-  return mockFetch(`/search?q=${encodeURIComponent(q)}`, () => {
+  const optimized = getOptimizedFlag();
+  return mockFetch(`/search?q=${encodeURIComponent(q)}&optimized=${optimized}`, () => {
     const term = q.trim().toLowerCase();
-    if (!term) return { items: [] as Product[], q };
+    if (!term) return { items: [] as Product[], q, optimized };
     const items = PRODUCTS.filter(
       (p) =>
         p.name.toLowerCase().includes(term) ||
         p.sku.toLowerCase().includes(term) ||
         p.category.toLowerCase().includes(term),
     );
-    return { items, q };
+    return { items, q, optimized };
   });
 }
 
-// GET /api/autocomplete?q=
+// GET /api/autocomplete?q=&optimized=
 export function autocomplete(q: string) {
-  return mockFetch(`/autocomplete?q=${encodeURIComponent(q)}`, () => {
+  const optimized = getOptimizedFlag();
+  return mockFetch(`/autocomplete?q=${encodeURIComponent(q)}&optimized=${optimized}`, () => {
     const term = q.trim().toLowerCase();
     if (!term) return { suggestions: [] as string[] };
     const suggestions = AUTOCOMPLETE_TERMS.filter((s) => s.toLowerCase().includes(term)).slice(0, 8);
@@ -84,21 +87,23 @@ export function autocomplete(q: string) {
   }) as Promise<{ suggestions: string[] }>;
 }
 
-// GET /api/top-products
+// GET /api/top-products?optimized=
 export function getTopProducts() {
-  return mockFetch(`/top-products`, () => {
+  const optimized = getOptimizedFlag();
+  return mockFetch(`/top-products?optimized=${optimized}`, () => {
     // Simulate live mutation in volumes
     return TOP_PRODUCTS.map((t) => ({
       ...t,
       volume: Math.max(50, t.volume + Math.round((Math.random() - 0.5) * 200)),
       delta: +(t.delta + (Math.random() - 0.5) * 2).toFixed(1),
     })) as TopProduct[];
-  }, );
+  });
 }
 
-// GET /api/fraud-check
+// GET /api/fraud-check?optimized=
 export function getFraudCheck() {
-  return mockFetch(`/fraud-check`, () => FRAUD_TX as FraudTx[]);
+  const optimized = getOptimizedFlag();
+  return mockFetch(`/fraud-check?optimized=${optimized}`, () => FRAUD_TX as FraudTx[]);
 }
 
 // GET /api/benchmark

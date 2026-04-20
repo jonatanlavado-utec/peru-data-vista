@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
 import { getFraudCheck } from "@/lib/api";
+import { useOptimized } from "@/lib/optimized-context";
 import type { FraudTx } from "@/lib/types";
 
 const STATUS_META: Record<FraudTx["status"], { label: string; cls: string; row: string; Icon: typeof ShieldAlert }> = {
@@ -27,15 +28,27 @@ const STATUS_META: Record<FraudTx["status"], { label: string; cls: string; row: 
 const FraudPage = () => {
   const [items, setItems] = useState<FraudTx[]>([]);
   const [loading, setLoading] = useState(true);
+  const { optimized } = useOptimized();
 
   useEffect(() => {
     document.title = "Fraud.Sys — AmazonPe";
+    let alive = true;
+    setLoading(true);
     (async () => {
-      const data = await getFraudCheck();
-      setItems(data);
-      setLoading(false);
+      try {
+        const data = await getFraudCheck();
+        if (alive) {
+          setItems(data);
+          setLoading(false);
+        }
+      } catch {
+        if (alive) setLoading(false);
+      }
     })();
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [optimized]);
 
   const stats = {
     total: items.length,

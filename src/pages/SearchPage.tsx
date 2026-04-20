@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { searchProducts } from "@/lib/api";
+import { useOptimized } from "@/lib/optimized-context";
 import type { Product } from "@/lib/types";
 import { ProductCard, ProductCardSkeleton } from "@/components/ProductCard";
 import { Search as SearchIcon } from "lucide-react";
@@ -8,6 +9,7 @@ import { Search as SearchIcon } from "lucide-react";
 const SearchPage = () => {
   const [params] = useSearchParams();
   const q = params.get("q") ?? "";
+  const { optimized } = useOptimized();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,16 +18,23 @@ const SearchPage = () => {
     let alive = true;
     setLoading(true);
     (async () => {
-      const data = await searchProducts(q);
-      if (alive) {
-        setItems(data.items);
-        setLoading(false);
+      try {
+        const data = await searchProducts(q);
+        if (alive) {
+          setItems(data.items);
+          setLoading(false);
+        }
+      } catch {
+        if (alive) {
+          setItems([]);
+          setLoading(false);
+        }
       }
     })();
     return () => {
       alive = false;
     };
-  }, [q]);
+  }, [q, optimized]);
 
   return (
     <div className="px-4 sm:px-6 py-6 max-w-[1440px] mx-auto">
