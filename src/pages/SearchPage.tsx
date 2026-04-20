@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { searchProducts } from "@/lib/api";
+import { useOptimized } from "@/lib/optimized-context";
 import type { Product } from "@/lib/types";
 import { ProductCard, ProductCardSkeleton } from "@/components/ProductCard";
 import { Search as SearchIcon } from "lucide-react";
