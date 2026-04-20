@@ -1,105 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* AmazonPe Cyber-Canopy Design System
+ * Bioluminescent fungi against dark wet bark — code meets jungle.
+ * All colors HSL.
+ */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 200 35% 2%;
+    --foreground: 210 20% 90%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --abyss: 200 35% 2%;
+    --bark: 215 30% 6%;
+    --bark-light: 215 25% 10%;
+    --bark-elevated: 215 22% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --card: 215 30% 6%;
+    --card-foreground: 210 20% 90%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --popover: 215 25% 10%;
+    --popover-foreground: 210 20% 90%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Neon accents */
+    --primary: 187 100% 50%;          /* neon blue */
+    --primary-foreground: 200 35% 4%;
+    --primary-glow: 187 100% 60%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --secondary: 215 25% 12%;
+    --secondary-foreground: 210 20% 90%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: 215 22% 14%;
+    --muted-foreground: 213 14% 50%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: 322 100% 50%;           /* neon magenta */
+    --accent-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --success: 135 100% 50%;          /* neon green */
+    --warning: 45 100% 55%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --border: 210 30% 18% / 0.4;
+    --edge: 210 30% 18%;
+    --input: 215 25% 12%;
+    --ring: 187 100% 50%;
 
-    --sidebar-background: 0 0% 98%;
+    --radius: 0.125rem;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Gradients */
+    --gradient-glow-blue: radial-gradient(ellipse at top, hsl(187 100% 50% / 0.12), transparent 60%);
+    --gradient-glow-magenta: radial-gradient(ellipse at bottom right, hsl(322 100% 50% / 0.08), transparent 60%);
+    --gradient-card-hover: linear-gradient(180deg, hsl(187 100% 50% / 0.18) 0%, transparent 100%);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Shadows */
+    --shadow-neon-blue: 0 0 20px hsl(187 100% 50% / 0.25);
+    --shadow-neon-magenta: 0 0 20px hsl(322 100% 50% / 0.25);
+    --shadow-neon-green: 0 0 8px hsl(135 100% 50% / 0.6);
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar */
+    --sidebar-background: 215 30% 6%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 187 100% 50%;
+    --sidebar-primary-foreground: 200 35% 4%;
+    --sidebar-accent: 215 25% 12%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 210 30% 18%;
+    --sidebar-ring: 187 100% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* same — single-theme app */
+    --background: 200 35% 2%;
+    --foreground: 210 20% 90%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--edge) / 0.4);
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image: var(--gradient-glow-blue), var(--gradient-glow-magenta);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--bark));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--edge));
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .font-sans {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .text-shadow-glow {
+    text-shadow: 0 0 12px hsl(var(--primary) / 0.6);
+  }
+
+  .border-edge {
+    border-color: hsl(var(--edge));
+  }
+  .border-edge\/50 {
+    border-color: hsl(var(--edge) / 0.5);
+  }
+
+  .bg-bark {
+    background-color: hsl(var(--bark));
+  }
+  .bg-bark-light {
+    background-color: hsl(var(--bark-light));
+  }
+  .bg-bark-elevated {
+    background-color: hsl(var(--bark-elevated));
+  }
+  .bg-abyss {
+    background-color: hsl(var(--abyss));
+  }
+
+  .text-neon-blue {
+    color: hsl(var(--primary));
+  }
+  .text-neon-magenta {
+    color: hsl(var(--accent));
+  }
+  .text-neon-green {
+    color: hsl(var(--success));
+  }
+  .bg-neon-blue {
+    background-color: hsl(var(--primary));
+  }
+  .bg-neon-magenta {
+    background-color: hsl(var(--accent));
+  }
+  .bg-neon-green {
+    background-color: hsl(var(--success));
+  }
+
+  .shadow-neon-blue {
+    box-shadow: var(--shadow-neon-blue);
+  }
+  .shadow-neon-magenta {
+    box-shadow: var(--shadow-neon-magenta);
+  }
+  .shadow-neon-green {
+    box-shadow: var(--shadow-neon-green);
+  }
+
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  .animate-scan {
+    animation: scan-line 8s linear infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+    50% { opacity: 0.6; box-shadow: 0 0 16px currentColor; }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, hsl(var(--bark-light)) 0%, hsl(var(--bark-elevated)) 50%, hsl(var(--bark-light)) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  .text-balance {
+    text-wrap: balance;
   }
 }
