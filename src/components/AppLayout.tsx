@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity } from "lucide-react";
+import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
+import { useOptimized } from "@/lib/optimized-context";
 
 const NAV = [
   { to: "/", label: "Discover", icon: Home, end: true },
@@ -15,6 +16,7 @@ export const AppLayout = () => {
   const [uptime, setUptime] = useState(99.998);
   const [latency, setLatency] = useState(14.2);
   const location = useLocation();
+  const { optimized, toggle } = useOptimized();
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -45,6 +47,22 @@ export const AppLayout = () => {
           </div>
 
           <div className="order-2 sm:order-3 flex items-center gap-3 text-xs font-mono shrink-0">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-pressed={optimized}
+              title={`Optimized data structures: ${optimized ? "ON" : "OFF"} — appends ?optimized=${optimized} to search, autocomplete, top-products & fraud-check`}
+              className={`flex items-center gap-1.5 px-2.5 py-1 border transition-all ${
+                optimized
+                  ? "border-neon-magenta/60 bg-neon-magenta/10 text-neon-magenta shadow-[0_0_12px_hsl(var(--neon-magenta)/0.35)]"
+                  : "border-edge bg-bark-light text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Zap className={`size-3 ${optimized ? "fill-current" : ""}`} />
+              <span className="uppercase tracking-wider">OPT</span>
+              <span className={`size-1.5 rounded-full ${optimized ? "bg-neon-magenta animate-pulse" : "bg-muted-foreground/40"}`} />
+              <span className="hidden sm:inline">{optimized ? "ON" : "OFF"}</span>
+            </button>
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 border border-edge bg-bark-light text-neon-green">
               <Activity className="size-3" />
               <span>UPTIME {uptime}%</span>
