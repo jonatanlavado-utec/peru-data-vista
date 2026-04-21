@@ -18,7 +18,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
         <span className="text-[10px] font-mono text-muted-foreground tracking-wider">
           SKU:{product.sku}
         </span>
-        <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${badge.cls}`}>{badge.label}</span>
+        <span className={`text-[9px] font-mono px-1.5 py-0.5 border ${badge?.cls}`}>{badge?.label}</span>
       </div>
 
       <div className="aspect-square bg-bark-light relative overflow-hidden">

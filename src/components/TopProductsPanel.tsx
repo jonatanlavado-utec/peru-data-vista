@@ -79,7 +79,7 @@ export const TopProductsPanel = () => {
                       {p.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                      vol: {p.volume.toLocaleString()}
+                      vol: {p?.sales?.toLocaleString()}
                     </div>
                   </div>
                   <div

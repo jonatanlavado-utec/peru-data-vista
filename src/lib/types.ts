@@ -18,6 +18,7 @@ export interface TopProduct {
   name: string;
   image: string;
   volume: number;
+  sales: number;
   delta: number; // % change
 }
 

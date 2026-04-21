@@ -30,24 +30,28 @@ const FraudPage = () => {
   const [loading, setLoading] = useState(true);
   const { optimized } = useOptimized();
 
+  // Inside FraudPage component
   useEffect(() => {
     document.title = "Fraud.Sys — AmazonPe";
     let alive = true;
     setLoading(true);
-    (async () => {
+
+    const fetchData = async () => {
       try {
-        const data = await getFraudCheck();
+        const data = await getFraudCheck(40); // Requesting 40 items
         if (alive) {
+          // Now 'data' is already FraudTx[] thanks to our API helper mapping
           setItems(data);
           setLoading(false);
         }
-      } catch {
+      } catch (err) {
+        console.error(err);
         if (alive) setLoading(false);
       }
-    })();
-    return () => {
-      alive = false;
     };
+
+    fetchData();
+    return () => { alive = false; };
   }, [optimized]);
 
   const stats = {
