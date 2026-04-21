@@ -22,7 +22,7 @@ import type {
 } from "./types";
 
 // Toggle to switch to real backend later.
-export const USE_MOCKS = true;
+export const USE_MOCKS = false;
 const BASE_URL = "/api";
 
 function delay<T>(value: T, min = 250, max = 700): Promise<T> {
@@ -129,4 +129,21 @@ export function getPriorityOrders(page = 1, limit = 20) {
 // GET /api/lsm-debug
 export function getLsmDebug() {
   return mockFetch(`/lsm-debug`, () => LSM_LOG as LsmEvent[]);
+}
+
+// GET /init-async - Start async initialization
+export async function startInitAsync(products: number = 1000000, transactions: number = 10000000) {
+  const res = await fetch(`/init-async?products=${products}&transactions=${transactions}`);
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Init failed");
+  }
+  return res.json();
+}
+
+// GET /init-status - Get initialization progress
+export async function getInitStatus() {
+  const res = await fetch(`/init-status`);
+  if (!res.ok) throw new Error("Failed to get init status");
+  return res.json();
 }

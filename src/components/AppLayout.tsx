@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap } from "lucide-react";
+import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap, Database, Loader2 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { useOptimized } from "@/lib/optimized-context";
+import { getInitStatus, startInitAsync } from "@/lib/api";
+
+const INIT_PRODUCTS = parseInt(import.meta.env.VITE_INIT_PRODUCTS || "1000000");
+const INIT_TRANSACTIONS = parseInt(import.meta.env.VITE_INIT_TRANSACTIONS || "10000000");
 
 const NAV = [
   { to: "/", label: "Discover", icon: Home, end: true },
@@ -17,6 +21,43 @@ export const AppLayout = () => {
   const [latency, setLatency] = useState(14.2);
   const location = useLocation();
   const { optimized, toggle } = useOptimized();
+  const [initStatus, setInitStatus] = useState<{
+    running: boolean;
+    initialized: boolean;
+    products: { done: number; total: number; percent: number };
+    transactions: { done: number; total: number; percent: number };
+  } | null>(null);
+  const [initLoading, setInitLoading] = useState(false);
+
+  // Poll init status (every 500ms for real-time feel)
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const status = await getInitStatus();
+        if (alive) setInitStatus(status);
+      } catch {
+        // ignore
+      }
+    };
+    poll();
+    const id = setInterval(poll, 500);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  const handleInit = async () => {
+    setInitLoading(true);
+    try {
+      await startInitAsync(INIT_PRODUCTS, INIT_TRANSACTIONS);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setInitLoading(false);
+    }
+  };
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -42,6 +83,42 @@ export const AppLayout = () => {
             </h1>
           </NavLink>
 
+          {/* Data generation progress - upper left, after logo */}
+          <div className="flex items-center gap-2 text-xs font-mono shrink-0">
+            {initStatus && initStatus.running && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 border border-neon-blue/40 bg-neon-blue/10 text-neon-blue">
+                <Loader2 className="size-3 animate-spin" />
+                <span>{initStatus.products.done.toLocaleString()} prod</span>
+                <span className="text-neon-magenta">/ {initStatus.transactions.done.toLocaleString()} txn</span>
+              </div>
+            )}
+            {initStatus && initStatus.initialized && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 border border-neon-green/40 bg-neon-green/10 text-neon-green">
+                <Database className="size-3" />
+                <span>{(initStatus.products.total / 1000000).toFixed(1)}M</span>
+                <span className="text-neon-magenta">/ {(initStatus.transactions.total / 1000000).toFixed(1)}M</span>
+              </div>
+            )}
+            {initStatus && !initStatus.initialized && !initStatus.running && (
+              <button
+                type="button"
+                onClick={handleInit}
+                disabled={initLoading}
+                className="flex items-center gap-1.5 px-2.5 py-1 border border-neon-blue/60 bg-neon-blue/10 text-neon-blue hover:bg-neon-blue/20 transition-colors"
+                title="Click to generate dataset"
+              >
+                <Database className="size-3" />
+                <span>GEN</span>
+              </button>
+            )}
+            {!initStatus && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 border border-edge bg-bark-light text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" />
+                <span>loading...</span>
+              </div>
+            )}
+          </div>
+
           <div className="order-3 sm:order-2 flex-1 min-w-full sm:min-w-0">
             <SearchBar />
           </div>
@@ -58,7 +135,7 @@ export const AppLayout = () => {
                   : "border-edge bg-bark-light text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Zap className={`size-3 ${optimized ? "fill-current" : ""}`} />
+              <Zap className={`size-3 ${optimized ? "fill-current" : ""} `} />
               <span className="uppercase tracking-wider">OPT</span>
               <span className={`size-1.5 rounded-full ${optimized ? "bg-neon-magenta animate-pulse" : "bg-muted-foreground/40"}`} />
               <span className="hidden sm:inline">{optimized ? "ON" : "OFF"}</span>
