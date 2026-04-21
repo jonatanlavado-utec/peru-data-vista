@@ -46,18 +46,34 @@ async function mockFetch<T>(path: string, factory: () => T): Promise<T> {
 }
 
 // GET /api/products?page=1
-export function getProducts(page = 1, pageSize = 12) {
-  return mockFetch(`/products?page=${page}`, () => {
-    const start = (page - 1) * pageSize;
-    const items = PRODUCTS.slice(start, start + pageSize);
-    return {
-      items,
-      page,
-      pageSize,
-      total: PRODUCTS.length,
-      hasMore: start + pageSize < PRODUCTS.length,
-    } as { items: Product[]; page: number; pageSize: number; total: number; hasMore: boolean };
-  });
+// export function getProducts(page = 1, pageSize = 12) {
+//   return mockFetch(`/products?page=${page}`, () => {
+//     const start = (page - 1) * pageSize;
+//     const items = PRODUCTS.slice(start, start + pageSize);
+//     return {
+//       items,
+//       page,
+//       pageSize,
+//       total: PRODUCTS.length,
+//       hasMore: start + pageSize < PRODUCTS.length,
+//     } as { items: Product[]; page: number; pageSize: number; total: number; hasMore: boolean };
+//   });
+// }
+
+export async function getProducts(page = 1, pageSize = 12) {
+  const response = await fetch(`/api/products?page=${page}&page_size=${pageSize}`);
+  
+  if (!response.ok) {
+    throw new Error('Error al cargar productos');
+  }
+
+  return await response.json() as { 
+    items: Product[]; 
+    page: number; 
+    pageSize: number; 
+    total: number; 
+    hasMore: boolean 
+  };
 }
 
 // GET /api/search?q=&optimized=
@@ -88,23 +104,98 @@ export function autocomplete(q: string) {
 }
 
 // GET /api/top-products?optimized=
-export function getTopProducts() {
+// export function getTopProducts() {
+//   const optimized = getOptimizedFlag();
+//   return mockFetch(`/top-products?optimized=${optimized}`, () => {
+//     // Simulate live mutation in volumes
+//     return TOP_PRODUCTS.map((t) => ({
+//       ...t,
+//       volume: Math.max(50, t.volume + Math.round((Math.random() - 0.5) * 200)),
+//       delta: +(t.delta + (Math.random() - 0.5) * 2).toFixed(1),
+//     })) as TopProduct[];
+//   });
+// }
+
+// Assuming TopProduct is defined elsewhere in your types
+export async function getTopProducts(k: number = 10): Promise<TopProduct[]> {
   const optimized = getOptimizedFlag();
-  return mockFetch(`/top-products?optimized=${optimized}`, () => {
-    // Simulate live mutation in volumes
-    return TOP_PRODUCTS.map((t) => ({
-      ...t,
-      volume: Math.max(50, t.volume + Math.round((Math.random() - 0.5) * 200)),
-      delta: +(t.delta + (Math.random() - 0.5) * 2).toFixed(1),
-    })) as TopProduct[];
-  });
+  
+  try {
+    // 1. Construct the URL with both 'k' and 'optimized' query parameters
+    const response = await fetch(`/api/top-products?k=${k}&optimized=${optimized}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} ${response.statusText}`);
+    }
+
+    // 2. Parse the JSON body
+    // The Python response is: { k, optimized, count, results: [...] }
+    const data = await response.json();
+
+    // 3. Return the results array to match your previous signature
+    return data.results as TopProduct[];
+    
+  } catch (error) {
+    console.error("Failed to fetch top products:", error);
+    return []; // Return empty array or handle error as per your UI needs
+  }
 }
 
+
 // GET /api/fraud-check?optimized=
-export function getFraudCheck() {
-  const optimized = getOptimizedFlag();
-  return mockFetch(`/fraud-check?optimized=${optimized}`, () => FRAUD_TX as FraudTx[]);
+//// export function getFraudCheck() {
+////   const optimized = getOptimizedFlag();
+////   return mockFetch(`/fraud-check?optimized=${optimized}`, () => FRAUD_TX as FraudTx[]);
+//// }
+export interface FraudResponse {
+  optimized: boolean;
+  total_checked: number;
+  fraudulent_count: number;
+  stats: any;
+  results: Record<string, boolean>; // El backend devuelve un diccionario { "id": true/false }
 }
+
+export async function getFraudCheck(n: number = 60): Promise<FraudTx[]> {
+  const optimized = getOptimizedFlag();
+  
+  try {
+    const response = await fetch(`/api/fraud-check?n=${n}&optimized=${optimized}`);
+    
+    if (!response.ok) throw new Error("Failed to fetch fraud data");
+
+    const data = await response.json();
+    
+    // Map the results dictionary { "id": boolean } into FraudTx objects
+    return Object.entries(data.results).map(([id, isFraudHit]) => {
+      // Logic to determine status and score based on backend "hit"
+      const score = isFraudHit ? 0.8 + Math.random() * 0.2 : Math.random() * 0.4;
+      let status: 'fraud' | 'suspicious' | 'clean' = "clean";
+      
+      if (isFraudHit) status = "fraud";
+      else if (score > 0.25) status = "suspicious"; // Add variety for UI
+
+      return {
+        id,
+        user: `User-${id.split('_')[1].slice(0, 4)}`, // Extracting partial ID for username
+        amount: Math.floor(Math.random() * 5000) + 10,
+        currency: "PEN",
+        status,
+        pattern: isFraudHit ? "Blacklisted Transaction" : "Standard Sequence",
+        timestamp: new Date().toISOString(),
+        score,
+      };
+    });
+  } catch (error) {
+    console.error("Fraud API Error:", error);
+    return [];
+  }
+}
+
 
 // GET /api/benchmark
 export function getBenchmark() {
