@@ -74,14 +74,18 @@ export const AUTOCOMPLETE_TERMS = Array.from(
   ]),
 );
 
-export const TOP_PRODUCTS: TopProduct[] = PRODUCTS.slice(0, 6).map((p, i) => ({
-  id: p.id,
-  sku: p.sku,
-  name: p.name,
-  image: p.image,
-  volume: 8421 - i * 1100 + Math.floor(Math.random() * 400),
-  delta: +(14.2 - i * 2.3).toFixed(1),
-}));
+export const TOP_PRODUCTS: TopProduct[] = PRODUCTS.slice(0, 6).map((p, i) => {
+  const volume = 8421 - i * 1100 + Math.floor(Math.random() * 400);
+  return {
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    image: p.image,
+    volume,
+    sales: Math.round(volume * p.price),
+    delta: +(14.2 - i * 2.3).toFixed(1),
+  };
+});
 
 const PATTERNS = [
   "velocity_spike",
