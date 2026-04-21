@@ -1,4 +1,13 @@
-import type { Product, TopProduct, FraudTx, BenchmarkPoint, PriorityOrder, LsmEvent } from "./types";
+import type {
+  Product,
+  TopProduct,
+  FraudTx,
+  BenchmarkPoint,
+  PriorityOrder,
+  LsmEvent,
+  BenchmarkComparison,
+  OptimizedStructure,
+} from "./types";
 
 const productImg = (seed: number) => `https://picsum.photos/seed/amzpe-${seed}/600/600`;
 
@@ -125,7 +134,109 @@ export const BENCHMARK: BenchmarkPoint[] = STRUCTS.map((structure, i) => {
   };
 });
 
-const REGIONS = ["Lima", "Cusco", "Arequipa", "Loreto", "Trujillo", "Piura", "Tacna"];
+// ─────────────────────────────────────────────────────────────────────────────
+// Comparative benchmarks: optimized structure vs naive baseline.
+// Backend should return the same shape; the frontend just renders it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WORKLOAD_SIZES = [1_000, 5_000, 10_000, 50_000, 100_000, 500_000, 1_000_000];
+
+interface ComparisonRecipe {
+  structure: OptimizedStructure;
+  useCase: string;
+  baselineName: string;
+  // f(n) curves for time (ms) and memory (MB)
+  optTime: (n: number) => number;
+  baseTime: (n: number) => number;
+  optMem: (n: number) => number;
+  baseMem: (n: number) => number;
+}
+
+const RECIPES: ComparisonRecipe[] = [
+  {
+    structure: "Bloom Filter",
+    useCase: "Membership test (fraud lookup)",
+    baselineName: "HashSet exhaustivo",
+    optTime: (n) => 0.05 + Math.log2(n) * 0.02,
+    baseTime: (n) => 0.2 + n * 0.0008,
+    optMem: (n) => 0.5 + n * 0.0000012,
+    baseMem: (n) => 4 + n * 0.00006,
+  },
+  {
+    structure: "B+ Tree",
+    useCase: "Búsqueda por rango de productos",
+    baselineName: "Array + linear scan",
+    optTime: (n) => 0.1 + Math.log2(n) * 0.05,
+    baseTime: (n) => 0.3 + n * 0.0006,
+    optMem: (n) => 2 + n * 0.000018,
+    baseMem: (n) => 1 + n * 0.000045,
+  },
+  {
+    structure: "Count-Min Sketch",
+    useCase: "Top-K productos en streaming",
+    baselineName: "HashMap + sort completo",
+    optTime: (n) => 0.08 + Math.log2(n) * 0.015,
+    baseTime: (n) => 0.5 + n * 0.0009,
+    optMem: (n) => 0.8,
+    baseMem: (n) => 3 + n * 0.00008,
+  },
+  {
+    structure: "Priority Queue",
+    useCase: "Despacho de órdenes prioritarias",
+    baselineName: "Lista ordenada en cada insert",
+    optTime: (n) => 0.06 + Math.log2(n) * 0.03,
+    baseTime: (n) => 0.4 + n * 0.0011,
+    optMem: (n) => 1.5 + n * 0.00002,
+    baseMem: (n) => 2 + n * 0.00005,
+  },
+  {
+    structure: "Trie",
+    useCase: "Autocompletado de búsqueda",
+    baselineName: "Filtrado lineal de strings",
+    optTime: (n) => 0.04 + Math.log2(n) * 0.01,
+    baseTime: (n) => 0.6 + n * 0.0012,
+    optMem: (n) => 3 + n * 0.00003,
+    baseMem: (n) => 1.2 + n * 0.00002,
+  },
+];
+
+function jitter(value: number, pct = 0.08): number {
+  const delta = value * pct * (Math.random() - 0.5) * 2;
+  return Math.max(0, +(value + delta).toFixed(3));
+}
+
+export const BENCHMARK_COMPARISONS: BenchmarkComparison[] = RECIPES.map((r) => {
+  const optPoints = WORKLOAD_SIZES.map((n) => ({
+    x: n,
+    timeMs: jitter(r.optTime(n)),
+    memMb: jitter(r.optMem(n)),
+  }));
+  const basePoints = WORKLOAD_SIZES.map((n) => ({
+    x: n,
+    timeMs: jitter(r.baseTime(n)),
+    memMb: jitter(r.baseMem(n)),
+  }));
+  const avg = (arr: number[]) => +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(3);
+  return {
+    structure: r.structure,
+    useCase: r.useCase,
+    baselineName: r.baselineName,
+    series: [
+      { label: r.structure, kind: "optimized", points: optPoints },
+      { label: r.baselineName, kind: "baseline", points: basePoints },
+    ],
+    summary: {
+      optimized: {
+        avgTimeMs: avg(optPoints.map((p) => p.timeMs)),
+        avgMemMb: avg(optPoints.map((p) => p.memMb)),
+      },
+      baseline: {
+        avgTimeMs: avg(basePoints.map((p) => p.timeMs)),
+        avgMemMb: avg(basePoints.map((p) => p.memMb)),
+      },
+    },
+  };
+});
 const SLAS: PriorityOrder["sla"][] = ["P0", "P1", "P2", "P3"];
 
 export const PRIORITY_ORDERS: PriorityOrder[] = Array.from({ length: 80 })
