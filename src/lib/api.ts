@@ -206,12 +206,14 @@ export function getBenchmark() {
 
 // GET /api/benchmark-comparisons
 // Returns one comparison (optimized vs naive baseline) per data structure.
-// Backend: replace the mock with the real handler — the response shape is fixed.
-export function getBenchmarkComparisons() {
-  return mockFetch(
-    `/benchmark-comparisons`,
-    () => BENCHMARK_COMPARISONS as BenchmarkComparison[],
-  ) as Promise<BenchmarkComparison[]>;
+// NOTE: forced to use local mock data until the backend implements this endpoint.
+// To switch to the real API, replace the body with:
+//   const res = await fetch(`${BASE_URL}/benchmark-comparisons`);
+//   return res.json() as Promise<BenchmarkComparison[]>;
+export async function getBenchmarkComparisons(): Promise<BenchmarkComparison[]> {
+  // simulate small network delay for skeleton UX
+  await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
+  return BENCHMARK_COMPARISONS as BenchmarkComparison[];
 }
 
 // GET /api/priority-orders?page=&limit=
