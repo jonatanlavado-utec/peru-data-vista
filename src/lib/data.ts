@@ -237,6 +237,8 @@ export const BENCHMARK_COMPARISONS: BenchmarkComparison[] = RECIPES.map((r) => {
     },
   };
 });
+
+const REGIONS = ["Lima", "Cusco", "Arequipa", "Loreto", "Trujillo", "Piura", "Tacna"];
 const SLAS: PriorityOrder["sla"][] = ["P0", "P1", "P2", "P3"];
 
 export const PRIORITY_ORDERS: PriorityOrder[] = Array.from({ length: 80 })

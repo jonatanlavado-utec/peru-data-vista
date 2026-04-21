@@ -7,6 +7,7 @@ import {
   TOP_PRODUCTS,
   FRAUD_TX,
   BENCHMARK,
+  BENCHMARK_COMPARISONS,
   PRIORITY_ORDERS,
   LSM_LOG,
   AUTOCOMPLETE_TERMS,
@@ -17,6 +18,7 @@ import type {
   TopProduct,
   FraudTx,
   BenchmarkPoint,
+  BenchmarkComparison,
   PriorityOrder,
   LsmEvent,
 } from "./types";
@@ -200,6 +202,16 @@ export async function getFraudCheck(n: number = 60): Promise<FraudTx[]> {
 // GET /api/benchmark
 export function getBenchmark() {
   return mockFetch(`/benchmark`, () => BENCHMARK as BenchmarkPoint[]);
+}
+
+// GET /api/benchmark-comparisons
+// Returns one comparison (optimized vs naive baseline) per data structure.
+// Backend: replace the mock with the real handler — the response shape is fixed.
+export function getBenchmarkComparisons() {
+  return mockFetch(
+    `/benchmark-comparisons`,
+    () => BENCHMARK_COMPARISONS as BenchmarkComparison[],
+  ) as Promise<BenchmarkComparison[]>;
 }
 
 // GET /api/priority-orders?page=&limit=
