@@ -44,6 +44,49 @@ export interface BenchmarkPoint {
   series: { x: number; latency: number; memory: number }[];
 }
 
+// New: comparative benchmark — one optimized structure vs a naive baseline.
+// Backend should return one BenchmarkComparison per structure.
+export type OptimizedStructure =
+  | "Bloom Filter"
+  | "B+ Tree"
+  | "Count-Min Sketch"
+  | "Priority Queue"
+  | "Trie";
+
+export interface BenchmarkSamplePoint {
+  // x is the workload size (e.g. number of operations / dataset size)
+  x: number;
+  // execution time in milliseconds at that workload size
+  timeMs: number;
+  // memory footprint in megabytes at that workload size
+  memMb: number;
+}
+
+export interface BenchmarkSeries {
+  // Display label for the series (e.g. "Bloom Filter", "Linear Scan")
+  label: string;
+  // Whether this series is the optimized structure or the naive baseline
+  kind: "optimized" | "baseline";
+  // Sample points across workload sizes (shared x across both series of a comparison)
+  points: BenchmarkSamplePoint[];
+}
+
+export interface BenchmarkComparison {
+  // The optimized data structure being benchmarked
+  structure: OptimizedStructure;
+  // The use case the comparison illustrates (e.g. "Membership test")
+  useCase: string;
+  // Short human-readable name of the non-optimal counterpart (e.g. "Linear Scan")
+  baselineName: string;
+  // Two series: [optimized, baseline] — frontend renders both on the same axis
+  series: [BenchmarkSeries, BenchmarkSeries];
+  // Aggregate summary metrics for headline tiles
+  summary: {
+    optimized: { avgTimeMs: number; avgMemMb: number };
+    baseline: { avgTimeMs: number; avgMemMb: number };
+  };
+}
+
 export interface PriorityOrder {
   id: string;
   priority: number; // 1 highest
