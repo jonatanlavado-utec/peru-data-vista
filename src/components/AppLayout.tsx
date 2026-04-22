@@ -32,7 +32,7 @@ export const AppLayout = () => {
   // Poll init status only while running or not yet initialized
   useEffect(() => {
     let alive = true;
-    let intervalId: number;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const poll = async () => {
       try {
@@ -43,7 +43,7 @@ export const AppLayout = () => {
         // Stop polling once initialized and not running
         if (status.initialized && !status.running && intervalId) {
           clearInterval(intervalId);
-          intervalId = 0;
+          intervalId = null;
         }
       } catch {
         // ignore
