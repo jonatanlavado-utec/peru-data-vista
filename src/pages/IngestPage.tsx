@@ -1,5 +1,16 @@
 import { useState } from "react";
-import { Package, CreditCard, ListOrdered, Send, CheckCircle2, AlertTriangle, Loader2, Copy } from "lucide-react";
+import {
+  Package,
+  CreditCard,
+  ListOrdered,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  Copy,
+  RefreshCw,
+  Pencil,
+} from "lucide-react";
 
 type Endpoint = "/api/products" | "/api/transactions" | "/api/orders";
 
@@ -88,22 +99,63 @@ type Status = "idle" | "loading" | "success" | "error";
 
 interface ResultState {
   status: Status;
-  payload?: Record<string, unknown>;
+  draft: string;            // editable JSON text
+  parseError?: string;      // JSON parse error in draft
   response?: unknown;
-  error?: string;
+  error?: string;           // network / server error
   ts?: string;
 }
 
-export default function IngestPage() {
-  const [results, setResults] = useState<Record<string, ResultState>>({
-    product: { status: "idle" },
-    transaction: { status: "idle" },
-    order: { status: "idle" },
-  });
+const initialDraft = (a: ActionDef) => JSON.stringify(a.build(), null, 2);
 
-  const run = async (action: ActionDef) => {
-    const payload = action.build();
-    setResults((r) => ({ ...r, [action.key]: { status: "loading", payload } }));
+export default function IngestPage() {
+  const [results, setResults] = useState<Record<string, ResultState>>(() => ({
+    product: { status: "idle", draft: initialDraft(ACTIONS[0]) },
+    transaction: { status: "idle", draft: initialDraft(ACTIONS[1]) },
+    order: { status: "idle", draft: initialDraft(ACTIONS[2]) },
+  }));
+
+  const updateDraft = (key: string, draft: string) => {
+    let parseError: string | undefined;
+    try {
+      JSON.parse(draft);
+    } catch (e) {
+      parseError = e instanceof Error ? e.message : "Invalid JSON";
+    }
+    setResults((r) => ({
+      ...r,
+      [key]: { ...r[key], draft, parseError },
+    }));
+  };
+
+  const regenerate = (action: ActionDef) => {
+    setResults((r) => ({
+      ...r,
+      [action.key]: { status: "idle", draft: initialDraft(action) },
+    }));
+  };
+
+  const send = async (action: ActionDef) => {
+    const current = results[action.key];
+    let payload: unknown;
+    try {
+      payload = JSON.parse(current.draft);
+    } catch (e) {
+      setResults((r) => ({
+        ...r,
+        [action.key]: {
+          ...r[action.key],
+          parseError: e instanceof Error ? e.message : "Invalid JSON",
+        },
+      }));
+      return;
+    }
+
+    setResults((r) => ({
+      ...r,
+      [action.key]: { ...r[action.key], status: "loading", parseError: undefined },
+    }));
+
     try {
       const res = await fetch(action.endpoint, {
         method: "POST",
@@ -127,18 +179,19 @@ export default function IngestPage() {
       setResults((r) => ({
         ...r,
         [action.key]: {
+          ...r[action.key],
           status: "success",
-          payload,
           response: parsed,
           ts: new Date().toISOString(),
+          error: undefined,
         },
       }));
     } catch (e) {
       setResults((r) => ({
         ...r,
         [action.key]: {
+          ...r[action.key],
           status: "error",
-          payload,
           error: e instanceof Error ? e.message : "Unknown error",
           ts: new Date().toISOString(),
         },
@@ -146,8 +199,8 @@ export default function IngestPage() {
     }
   };
 
-  const copy = (val: unknown) => {
-    navigator.clipboard.writeText(JSON.stringify(val, null, 2)).catch(() => {});
+  const copy = (val: string) => {
+    navigator.clipboard.writeText(val).catch(() => {});
   };
 
   return (
@@ -159,8 +212,9 @@ export default function IngestPage() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Ingesta de datos</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl font-mono">
-          Cada acción genera un JSON y lo envía al backend. El servidor dispara las indexaciones
-          (B+ Tree, Trie, CMS), evalúa fraude (Bloom) y encola órdenes prioritarias (PQ).
+          Genera, edita y envía el JSON al backend. Edita los campos directamente antes de
+          disparar la indexación (B+ Tree, Trie, CMS), evaluación de fraude (Bloom) o encolado
+          prioritario (PQ).
         </p>
       </header>
 
@@ -168,6 +222,8 @@ export default function IngestPage() {
         {ACTIONS.map((a) => {
           const r = results[a.key];
           const Icon = a.icon;
+          const hasParseError = !!r.parseError;
+          const sendDisabled = r.status === "loading" || hasParseError;
           return (
             <article
               key={a.key}
@@ -198,41 +254,71 @@ export default function IngestPage() {
                   ))}
                 </div>
 
+                {/* Editable JSON */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                      <Pencil className="size-3" />
+                      Payload (editable)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => copy(r.draft)}
+                        className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-neon-blue transition-colors"
+                        title="Copiar JSON"
+                      >
+                        <Copy className="size-3" />
+                        copy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => regenerate(a)}
+                        className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-neon-magenta transition-colors"
+                        title="Regenerar JSON"
+                      >
+                        <RefreshCw className="size-3" />
+                        regen
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={r.draft}
+                    onChange={(e) => updateDraft(a.key, e.target.value)}
+                    spellCheck={false}
+                    rows={10}
+                    className={`w-full p-2 bg-abyss/80 border text-[11px] font-mono text-foreground resize-y focus:outline-none focus:ring-1 ${
+                      hasParseError
+                        ? "border-destructive/60 focus:ring-destructive"
+                        : "border-edge focus:ring-neon-blue"
+                    }`}
+                  />
+                  {hasParseError && (
+                    <p className="mt-1 text-[10px] font-mono text-destructive break-all">
+                      ⚠ {r.parseError}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => run(a)}
-                  disabled={r.status === "loading"}
-                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 border ${a.border} ${a.bg} ${a.accent} font-mono text-xs uppercase tracking-wider hover:brightness-125 transition-all disabled:opacity-50`}
+                  onClick={() => send(a)}
+                  disabled={sendDisabled}
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 border ${a.border} ${a.bg} ${a.accent} font-mono text-xs uppercase tracking-wider hover:brightness-125 transition-all disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                   {r.status === "loading" ? (
                     <Loader2 className="size-3.5 animate-spin" />
                   ) : (
                     <Send className="size-3.5" />
                   )}
-                  <span>{r.status === "loading" ? "Enviando..." : "Generar y enviar"}</span>
+                  <span>
+                    {r.status === "loading"
+                      ? "Enviando..."
+                      : hasParseError
+                      ? "JSON inválido"
+                      : "Enviar al backend"}
+                  </span>
                 </button>
-
-                {r.payload && (
-                  <details open className="group">
-                    <summary className="flex items-center justify-between cursor-pointer text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground">
-                      <span>Payload JSON</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          copy(r.payload);
-                        }}
-                        className="flex items-center gap-1 hover:text-neon-blue"
-                      >
-                        <Copy className="size-3" />
-                        copy
-                      </button>
-                    </summary>
-                    <pre className="mt-2 p-2 bg-abyss/80 border border-edge text-[11px] font-mono text-foreground overflow-auto max-h-48">
-                      {JSON.stringify(r.payload, null, 2)}
-                    </pre>
-                  </details>
-                )}
 
                 {r.status === "success" && (
                   <div className="border border-neon-green/40 bg-neon-green/5 p-2">
