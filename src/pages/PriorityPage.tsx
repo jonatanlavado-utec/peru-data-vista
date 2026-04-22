@@ -108,7 +108,7 @@ const PriorityPage = () => {
                       </div>
                     </div>
                     <div className="text-right font-mono text-sm tabular-nums shrink-0">
-                      <div className="text-foreground">S/ {o.amount.toFixed(2)}</div>
+                      <div className="text-foreground">S/ {o.total.toFixed(2)}</div>
                       <div className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
                         <Zap className="size-2.5" />
                         idx:{i + 1}

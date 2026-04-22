@@ -21,6 +21,7 @@ import type {
   BenchmarkComparison,
   PriorityOrder,
   LsmEvent,
+  LsmDebugResponse,
 } from "./types";
 
 // Toggle to switch to real backend later.
@@ -95,14 +96,40 @@ export function searchProducts(q: string) {
 }
 
 // GET /api/autocomplete?q=&optimized=
-export function autocomplete(q: string) {
-  const optimized = getOptimizedFlag();
-  return mockFetch(`/autocomplete?q=${encodeURIComponent(q)}&optimized=${optimized}`, () => {
-    const term = q.trim().toLowerCase();
-    if (!term) return { suggestions: [] as string[] };
-    const suggestions = AUTOCOMPLETE_TERMS.filter((s) => s.toLowerCase().includes(term)).slice(0, 8);
-    return { suggestions };
-  }) as Promise<{ suggestions: string[] }>;
+//// export function autocomplete(q: string) {
+////   const optimized = getOptimizedFlag();
+////   return mockFetch(`/autocomplete?q=${encodeURIComponent(q)}&optimized=${optimized}`, () => {
+////     const term = q.trim().toLowerCase();
+////     if (!term) return { suggestions: [] as string[] };
+////     const suggestions = AUTOCOMPLETE_TERMS.filter((s) => s.toLowerCase().includes(term)).slice(0, 8);
+////     return { suggestions };
+////   }) as Promise<{ suggestions: string[] }>;
+//// }
+export async function getAutocomplete(q: string) {
+  // Return early if the query is empty to avoid unnecessary backend calls
+  if (!q || q.trim() === "") return [];
+
+  const isOptimized = getOptimizedFlag();
+  const path = `/autocomplete?q=${encodeURIComponent(q)}&optimized=${isOptimized}`;
+
+  return mockFetch(path, () => {
+    // This callback is used if USE_MOCKS is true. 
+    // We filter your mock AUTOCOMPLETE_TERMS based on the query.
+    const queryLower = q.toLowerCase();
+    
+    // Assuming AUTOCOMPLETE_TERMS is an array of strings or objects with a 'name' property
+    return AUTOCOMPLETE_TERMS
+      .filter((term: any) => {
+         const text = typeof term === 'string' ? term : term.name;
+         return text.toLowerCase().startsWith(queryLower);
+      })
+      .slice(0, 10)
+      .map((term: any, index: number) => ({
+        id: typeof term === 'string' ? `mock-${index}` : term.id,
+        name: typeof term === 'string' ? term : term.name,
+        sales: 0
+      }));
+  });
 }
 
 // GET /api/top-products?optimized=
@@ -210,30 +237,148 @@ export function getBenchmark() {
 // To switch to the real API, replace the body with:
 //   const res = await fetch(`${BASE_URL}/benchmark-comparisons`);
 //   return res.json() as Promise<BenchmarkComparison[]>;
+///// export async function getBenchmarkComparisons(): Promise<BenchmarkComparison[]> {
+/////   // simulate small network delay for skeleton UX
+/////   await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
+/////   return BENCHMARK_COMPARISONS as BenchmarkComparison[];
+///// }
+
 export async function getBenchmarkComparisons(): Promise<BenchmarkComparison[]> {
-  // simulate small network delay for skeleton UX
-  await new Promise((r) => setTimeout(r, 300 + Math.random() * 400));
-  return BENCHMARK_COMPARISONS as BenchmarkComparison[];
+  try {
+    const response = await fetch('/api/benchmark-comparisons');
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch benchmark comparisons: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Benchmark API Error:", error);
+    // Fallback to mock data if the backend isn't ready or times out
+    return BENCHMARK_COMPARISONS as BenchmarkComparison[];
+  }
 }
 
 // GET /api/priority-orders?page=&limit=
-export function getPriorityOrders(page = 1, limit = 20) {
-  return mockFetch(`/priority-orders?page=${page}&limit=${limit}`, () => {
-    const start = (page - 1) * limit;
-    const items = PRIORITY_ORDERS.slice(start, start + limit);
+////////export function getPriorityOrders(page = 1, limit = 20) {
+////////  return mockFetch(`/priority-orders?page=${page}&limit=${limit}`, () => {
+////////    const start = (page - 1) * limit;
+////////    const items = PRIORITY_ORDERS.slice(start, start + limit);
+////////    return {
+////////      items,
+////////      page,
+////////      limit,
+////////      total: PRIORITY_ORDERS.length,
+////////      hasMore: start + limit < PRIORITY_ORDERS.length,
+////////    } as { items: PriorityOrder[]; page: number; limit: number; total: number; hasMore: boolean };
+////////  });
+////////}
+export async function getPriorityOrders(page = 1, limit = 20) {
+  try {
+    const response = await fetch(`/api/priority-orders?page=${page}&limit=${limit}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch priority orders: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Map the backend structure to the format expected by the frontend
+    // Backend: { orders, page, limit, total, pages }
+    // Frontend expects: { items, page, limit, total, hasMore }
     return {
-      items,
+      items: data.orders as PriorityOrder[],
+      page: data.page,
+      limit: data.limit,
+      total: data.total,
+      hasMore: data.page < data.pages, // Calculate hasMore based on total pages
+    };
+  } catch (error) {
+    console.error("Priority Orders API Error:", error);
+    // Return empty state to prevent UI crash
+    return {
+      items: [],
       page,
       limit,
-      total: PRIORITY_ORDERS.length,
-      hasMore: start + limit < PRIORITY_ORDERS.length,
-    } as { items: PriorityOrder[]; page: number; limit: number; total: number; hasMore: boolean };
-  });
+      total: 0,
+      hasMore: false,
+    };
+  }
 }
 
+
 // GET /api/lsm-debug
-export function getLsmDebug() {
-  return mockFetch(`/lsm-debug`, () => LSM_LOG as LsmEvent[]);
+//////export function getLsmDebug() {
+//////  return mockFetch(`/lsm-debug`, () => LSM_LOG as LsmEvent[]);
+//////}
+// GET /api/lsm-debug
+// Update this in api.ts
+
+export async function getLsmDebug(): Promise<LsmDebugResponse> {
+  try {
+    const response = await fetch('/api/lsm-debug');
+    if (!response.ok) throw new Error("Failed to fetch LSM state");
+    
+    const data = await response.json();
+
+    // 1. Helper to map backend Python event names to our UI badge types
+    const mapEventType = (backendEvent: string) => {
+      if (!backendEvent) return 'READ';
+      if (backendEvent.includes('flush')) return 'FLUSH';
+      if (backendEvent.includes('minor')) return 'MERGE';
+      if (backendEvent.includes('compaction')) return 'COMPACT';
+      return 'READ';
+    };
+
+    // 2. Normalize the timeline events
+    const cleanedTimeline = (data.timeline || []).map((e: any) => {
+      // Extract data from the nested 'details' dictionary
+      const details = e.details || {};
+      const sizeMb = details.size_mb || 0;
+      
+      // Build a clean description string for the UI
+      const detailStr = `Processed ${details.entries_written || 0} writes, ${details.entries_removed || 0} deletions.`;
+
+      return {
+        ...e,
+        id: e.id || `evt-${Math.random().toString(36).substr(2, 9)}`,
+        type: mapEventType(e.event),
+        // Ensure timestamp is a valid ISO string
+        timestamp: typeof e.timestamp === 'number' 
+          ? new Date(e.timestamp * 1000).toISOString() 
+          : e.timestamp || new Date().toISOString(),
+        // Convert Backend's MB to Frontend's raw Bytes
+        bytes: Math.floor(sizeMb * 1024 * 1024),
+        level: Number(e.level) || 0,
+        detail: detailStr,
+        key: details.key || null
+      };
+    });
+
+    // 3. Normalize the Tree Levels for the Sidebar
+    const backendLevels = data.lsm_state?.levels || [];
+    const cleanedLevels = backendLevels.map((l: any) => ({
+      level: l.level,
+      // Map the length of the sstables array to 'count'
+      count: Array.isArray(l.sstables) ? l.sstables.length : 0,
+      // Convert Backend's MB to Frontend's raw Bytes
+      size_bytes: (l.current_size_mb || 0) * 1024 * 1024
+    }));
+
+    return {
+      description: data.description || "LSM Tree Status",
+      lsm_state: { ...data.lsm_state, levels: cleanedLevels },
+      timeline: cleanedTimeline
+    };
+  } catch (error) {
+    console.error("LSM API Error:", error);
+    // Return empty fallback state to prevent crashes on network failure
+    return {
+      description: "Error loading state",
+      lsm_state: { levels: [] },
+      timeline: []
+    };
+  }
 }
 
 // GET /init-async - Start async initialization
