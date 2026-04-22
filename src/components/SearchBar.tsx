@@ -58,9 +58,7 @@ export const SearchBar = () => {
   const submit = (suggestion: AutocompleteItem) => {
     setQ(suggestion.name);
     setOpen(false);
-    // Optional: navigate directly to the product using suggestion.id
-    // navigate(`/product/${suggestion.id}`);
-    navigate(`/?q=${encodeURIComponent(suggestion.name)}`);
+    navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
   };
 
   return (
@@ -89,7 +87,7 @@ export const SearchBar = () => {
               } else if (q.trim()) {
                 // Submit raw query if nothing is selected
                 setOpen(false);
-                navigate(`/?q=${encodeURIComponent(q.trim())}`);
+                navigate(`/search?q=${encodeURIComponent(q.trim())}`);
               }
             } else if (e.key === "Escape") {
               setOpen(false);
