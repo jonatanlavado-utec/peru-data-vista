@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap, Database, Loader2, Send } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { useOptimized } from "@/lib/optimized-context";
-import { getInitStatus, startInitAsync } from "@/lib/api";
+import { getInitStatus, startInitAsync, getSystemStats, type SystemStats } from "@/lib/api";
 
 const INIT_PRODUCTS = parseInt(import.meta.env.VITE_INIT_PRODUCTS || "1000000");
 const INIT_TRANSACTIONS = parseInt(import.meta.env.VITE_INIT_TRANSACTIONS || "10000000");
@@ -29,6 +29,7 @@ export const AppLayout = () => {
     transactions: { done: number; total: number; percent: number };
   } | null>(null);
   const [initLoading, setInitLoading] = useState(false);
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
 
   // Poll init status only while running or not yet initialized
   useEffect(() => {
@@ -80,6 +81,31 @@ export const AppLayout = () => {
     return () => clearInterval(id);
   }, []);
 
+  // Poll system stats for real-time counts
+  useEffect(() => {
+    let alive = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const pollStats = async () => {
+      try {
+        const stats = await getSystemStats();
+        if (alive && stats) {
+          setSystemStats(stats);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    pollStats();
+    intervalId = setInterval(pollStats, 5000);
+
+    return () => {
+      alive = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <div className="min-h-dvh bg-abyss text-foreground font-sans relative overflow-x-hidden">
       {/* Ambient glows */}
@@ -106,7 +132,12 @@ export const AppLayout = () => {
               </div>
             )}
             {initStatus && initStatus.initialized && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 border border-neon-green/40 bg-neon-green/10 text-neon-green">
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 border border-neon-green/40 bg-neon-green/10 text-neon-green cursor-help"
+                title={systemStats
+                  ? `Real counts:\n• Products: ${systemStats.dataset.products_count.toLocaleString()}\n• Transactions: ${systemStats.dataset.transactions_count.toLocaleString()}\n• Orders: ${systemStats.dataset.orders_in_heap.toLocaleString()}`
+                  : `Initial dataset:\n• Products: ${initStatus.products.total.toLocaleString()}\n• Transactions: ${initStatus.transactions.total.toLocaleString()}`}
+              >
                 <Database className="size-3" />
                 <span>{(initStatus.products.total / 1000000).toFixed(1)}M</span>
                 <span className="text-neon-magenta">/ {(initStatus.transactions.total / 1000000).toFixed(1)}M</span>

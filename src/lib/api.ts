@@ -397,3 +397,29 @@ export async function getInitStatus() {
   if (!res.ok) throw new Error("Failed to get init status");
   return res.json();
 }
+
+// GET /api/stats - Get real-time system stats
+export interface SystemStats {
+  dataset: {
+    initialized: boolean;
+    products_count: number;
+    transactions_count: number;
+    orders_in_heap: number;
+  };
+  memory: {
+    rss_mb: number;
+    vms_mb: number;
+    percent: number;
+  };
+  indexes: Record<string, string>;
+}
+
+export async function getSystemStats(): Promise<SystemStats | null> {
+  try {
+    const res = await fetch(`/api/stats`);
+    if (!res.ok) return null;
+    return res.json() as Promise<SystemStats>;
+  } catch {
+    return null;
+  }
+}
