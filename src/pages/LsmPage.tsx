@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { getLsmDebug } from "@/lib/api";
-import type { LsmEvent } from "@/lib/types";
-import { Database, Layers, GitMerge, FileInput, Eye } from "lucide-react";
+import type { LsmEvent, LsmDebugResponse } from "@/lib/types";
+import { Database, Layers, GitMerge, FileInput, Eye, Loader2 } from "lucide-react";
 
+// Map event types to specific icons and colors
 const TYPE_META: Record<LsmEvent["type"], { color: string; Icon: typeof Database }> = {
   INSERT: { color: "text-neon-green border-neon-green/40 bg-neon-green/10", Icon: FileInput },
   FLUSH: { color: "text-neon-blue border-neon-blue/40 bg-neon-blue/10", Icon: Database },
@@ -11,6 +12,7 @@ const TYPE_META: Record<LsmEvent["type"], { color: string; Icon: typeof Database
   READ: { color: "text-muted-foreground border-edge bg-bark-light", Icon: Eye },
 };
 
+// Formatter for file sizes
 const formatBytes = (b: number) => {
   if (b < 1024) return `${b}B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)}KB`;
@@ -18,119 +20,138 @@ const formatBytes = (b: number) => {
 };
 
 const LsmPage = () => {
-  const [events, setEvents] = useState<LsmEvent[]>([]);
+  const [timeline, setTimeline] = useState<LsmEvent[]>([]);
+  const [treeState, setTreeState] = useState<LsmDebugResponse['lsm_state'] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = "LSM_Tree.Log — AmazonPe";
-    (async () => {
-      const d = await getLsmDebug();
-      setEvents(d);
-      setLoading(false);
-    })();
+    const load = async () => {
+      try {
+        const data = await getLsmDebug();
+        setTimeline(data.timeline);
+        setTreeState(data.lsm_state);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    load();
+    // Refresh every 5 seconds to track simulation progress
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  const levels = [0, 1, 2, 3, 4];
-  const levelLoads = levels.map((l) => {
-    const matching = events.filter((e) => e.level === l);
-    const bytes = matching.reduce((s, e) => s + e.bytes, 0);
-    return { level: l, count: matching.length, bytes };
-  });
-  const maxBytes = Math.max(1, ...levelLoads.map((l) => l.bytes));
+  // Use the server-provided state for the sidebar levels
+  const levelLoads = treeState?.levels || [];
+  
+  // Calculate max bytes for the progress bar relative width. 
+  // Fallback to 1024 to avoid division by zero.
+  const maxBytes = Math.max(...levelLoads.map(l => l.size_bytes), 1024);
 
   return (
-    <div className="px-4 sm:px-6 py-6 max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-      <section>
-        <header className="mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">
-            LSM_Tree<span className="text-neon-blue">.</span>Log
+    <div className="flex flex-col md:flex-row h-full gap-6 p-6 max-w-7xl mx-auto animate-fade-in pb-20">
+      {/* Main Timeline Section */}
+      <div className="flex-1 min-w-0">
+        <header className="mb-8">
+          <h2 className="text-3xl font-light tracking-tight text-foreground">
+            LSM<span className="text-primary">.</span>Tree
           </h2>
           <p className="text-sm text-muted-foreground font-mono mt-1">
-            {`> tail -f compaction --levels=0..4`}
+            {`> tail -f /var/log/lsm_engine.log`}
           </p>
         </header>
-
-        <div className="bg-bark border border-edge/60">
-          <div className="p-3 border-b border-edge/60 flex items-center justify-between bg-bark-light/30">
-            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-widest">
-              [ event_timeline ]
-            </span>
-            <span className="text-[11px] font-mono text-neon-green flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-neon-green animate-pulse" />
-              streaming
-            </span>
+        
+        {loading && timeline.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            <span className="font-mono text-sm">Loading LSM state...</span>
           </div>
-
-          <ol className="relative">
-            {loading
-              ? Array.from({ length: 8 }).map((_, i) => (
-                  <li key={i} className="p-3 border-b border-edge/30">
-                    <div className="h-12 animate-shimmer" />
-                  </li>
-                ))
-              : events.map((e) => {
-                  const meta = TYPE_META[e.type];
-                  const Icon = meta.Icon;
-                  return (
-                    <li
-                      key={e.id}
-                      className="px-4 py-3 border-b border-edge/30 flex items-start gap-3 hover:bg-bark-light/30 group"
-                    >
-                      <div
-                        className={`size-8 shrink-0 border flex items-center justify-center ${meta.color}`}
-                      >
-                        <Icon className="size-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${meta.color}`}>
-                            {e.type}
-                          </span>
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            L{e.level}
-                          </span>
-                          {e.key && (
-                            <span className="text-[11px] font-mono text-foreground truncate">
-                              {e.key}
-                            </span>
-                          )}
-                          <span className="text-[10px] font-mono text-muted-foreground ml-auto">
-                            {new Date(e.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 font-mono">
-                          {e.detail} · <span className="text-foreground">{formatBytes(e.bytes)}</span>
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-          </ol>
-        </div>
-      </section>
-
-      {/* Level visualization */}
-      <aside>
-        <div className="bg-bark border border-edge/60 p-4 sticky top-32">
-          <h3 className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
-            [ tree_state ]
-          </h3>
+        ) : (
           <div className="space-y-3">
+            {timeline.map((e) => {
+              // Ensure we don't crash if an unknown event type comes in
+              const meta = TYPE_META[e.type] || TYPE_META.READ; 
+              const Icon = meta.Icon;
+              
+              return (
+                <div key={e.id} className="p-4 border border-edge/40 bg-bark-dark/50 rounded-lg flex items-start gap-4 hover:border-edge/80 transition-colors">
+                  {/* Event Icon */}
+                  <div className={`p-2 rounded border ${meta.color} shrink-0`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  
+                  {/* Event Body */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className={`text-xs font-bold tracking-wider ${meta.color.split(' ')[0]}`}>
+                        {e.type}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        {new Date(e.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-foreground mb-2 break-words">
+                      {e.detail}
+                    </p>
+                    
+                    {/* Event Metadata Footer */}
+                    <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground flex-wrap">
+                      <span className="bg-bark-light px-1.5 py-0.5 rounded">Level {e.level}</span>
+                      <span>·</span>
+                      <span>{formatBytes(e.bytes)}</span>
+                      {e.key && (
+                        <>
+                          <span>·</span>
+                          <span className="text-primary truncate max-w-[200px]" title={e.key}>
+                            key: {e.key}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar Section */}
+      <aside className="w-full md:w-80 shrink-0">
+        <div className="sticky top-6 p-5 border border-edge bg-bark-dark/80 rounded-xl">
+          <h3 className="font-bold mb-6 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-primary" />
+            Tree Architecture
+          </h3>
+          
+          <div className="space-y-6">
+            {levelLoads.length === 0 && !loading && (
+              <div className="text-xs text-muted-foreground font-mono text-center py-4">
+                No active SSTables.
+              </div>
+            )}
+            
             {levelLoads.map((l) => {
-              const w = (l.bytes / maxBytes) * 100;
+              const w = (l.size_bytes / maxBytes) * 100;
               return (
                 <div key={l.level}>
+                  {/* Level Header */}
                   <div className="flex justify-between text-[10px] font-mono mb-1.5">
                     <span className="text-foreground">L{l.level}</span>
                     <span className="text-muted-foreground">
-                      {l.count} ev · {formatBytes(l.bytes)}
+                      {l.count} files · {formatBytes(l.size_bytes)}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-bark-light overflow-hidden border border-edge/60">
+                  
+                  {/* Level Progress Bar */}
+                  <div className="h-2 w-full bg-bark-light overflow-hidden border border-edge/60 rounded-full">
                     <div
-                      className="h-full transition-all duration-700"
+                      className="h-full transition-all duration-700 rounded-full"
                       style={{
-                        width: `${w}%`,
+                        width: `${Math.max(w, 2)}%`, // At least 2% width if there is data so it's visible
                         backgroundColor:
                           l.level === 0 ? "hsl(var(--success))" : l.level <= 2 ? "hsl(var(--primary))" : "hsl(var(--accent))",
                         boxShadow: `0 0 12px hsl(var(--primary) / 0.4)`,
@@ -141,6 +162,8 @@ const LsmPage = () => {
               );
             })}
           </div>
+          
+          {/* Footer Info */}
           <div className="mt-6 pt-4 border-t border-edge/60 text-[10px] font-mono text-muted-foreground space-y-1">
             <p>// L0 holds recent MemTable flushes</p>
             <p>// compaction merges down through levels</p>

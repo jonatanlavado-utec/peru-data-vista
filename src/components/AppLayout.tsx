@@ -41,7 +41,7 @@ export const AppLayout = () => {
       }
     };
     poll();
-    const id = setInterval(poll, 500);
+    const id = setInterval(poll, 1000);
     return () => {
       alive = false;
       clearInterval(id);
@@ -60,6 +60,7 @@ export const AppLayout = () => {
   };
 
   useEffect(() => {
+    handleInit();
     const id = setInterval(() => {
       setLatency(+(10 + Math.random() * 12).toFixed(1));
       setUptime(+(99.95 + Math.random() * 0.049).toFixed(3));

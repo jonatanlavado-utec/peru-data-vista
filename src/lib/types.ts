@@ -58,6 +58,8 @@ export interface BenchmarkSamplePoint {
   x: number;
   // execution time in milliseconds at that workload size
   timeMs: number;
+  time: number;
+  
   // memory footprint in megabytes at that workload size
   memMb: number;
 }
@@ -85,6 +87,10 @@ export interface BenchmarkComparison {
     optimized: { avgTimeMs: number; avgMemMb: number };
     baseline: { avgTimeMs: number; avgMemMb: number };
   };
+  title: string;
+  description: string;
+  id: string;
+  metric: string;
 }
 
 export interface PriorityOrder {
@@ -92,6 +98,7 @@ export interface PriorityOrder {
   priority: number; // 1 highest
   customer: string;
   amount: number;
+  total: number;
   timestamp: string;
   region: string;
   sla: "P0" | "P1" | "P2" | "P3";
@@ -107,4 +114,13 @@ export interface LsmEvent {
   bytes: number;
   key?: string;
   detail: string;
+}
+
+// Update your imports or add these interfaces
+export interface LsmDebugResponse {
+  description: string;
+  lsm_state: {
+    levels: Array<{ level: number; count: number; size_bytes: number }>;
+  };
+  timeline: LsmEvent[];
 }

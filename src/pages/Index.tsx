@@ -19,7 +19,6 @@ const Index = () => {
     (async () => {
       try {
         const data = await getProducts(1);
-        console.log('data', data)
         if (!alive) return;
         setProducts(data.items);
         setHasMore(data.hasMore);

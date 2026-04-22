@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
-import { autocomplete } from "@/lib/api";
+import { getAutocomplete } from "@/lib/api";
+
+// 1. Define the shape of our new autocomplete data
+interface AutocompleteItem {
+  id: string;
+  name: string;
+  sales: number;
+}
 
 export const SearchBar = () => {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  // 2. Update state to hold the objects instead of plain strings
+  const [suggestions, setSuggestions] = useState<AutocompleteItem[]>([]);
   const [active, setActive] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  console.log('suggestions', suggestions);
 
   // Debounced autocomplete
   useEffect(() => {
@@ -23,8 +32,9 @@ export const SearchBar = () => {
     setLoading(true);
     const id = setTimeout(async () => {
       try {
-        const { suggestions } = await autocomplete(term);
-        setSuggestions(suggestions);
+        // 3. The API now returns the array directly, no need to destructure { suggestions }
+        const results = await getAutocomplete(term);
+        setSuggestions(results || []);
       } catch {
         setSuggestions([]);
       } finally {
@@ -45,16 +55,17 @@ export const SearchBar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const submit = (term: string) => {
-    if (!term.trim()) return;
-    navigate(`/search?q=${encodeURIComponent(term.trim())}`);
+  const submit = (suggestion: AutocompleteItem) => {
+    setQ(suggestion.name);
     setOpen(false);
+    // Optional: navigate directly to the product using suggestion.id
+    // navigate(`/product/${suggestion.id}`);
+    navigate(`/?q=${encodeURIComponent(suggestion.name)}`);
   };
 
   return (
-    <div ref={wrapRef} className="relative w-full">
-      <div className="flex items-center bg-bark-light border border-edge focus-within:border-neon-blue/60 focus-within:shadow-neon-blue transition-all">
-        <span className="pl-3 text-neon-blue font-mono select-none">{">"}</span>
+    <div ref={wrapRef} className="relative w-full max-w-xl z-50">
+      <div className="relative group">
         <input
           type="text"
           value={q}
@@ -67,28 +78,35 @@ export const SearchBar = () => {
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setActive((a) => Math.min(suggestions.length - 1, a + 1));
+              setActive((p) => (p < suggestions.length - 1 ? p + 1 : p));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
-              setActive((a) => Math.max(-1, a - 1));
+              setActive((p) => (p > 0 ? p - 1 : -1));
             } else if (e.key === "Enter") {
-              submit(active >= 0 ? suggestions[active] : q);
+              e.preventDefault();
+              if (active >= 0 && suggestions[active]) {
+                submit(suggestions[active]);
+              } else if (q.trim()) {
+                // Submit raw query if nothing is selected
+                setOpen(false);
+                navigate(`/?q=${encodeURIComponent(q.trim())}`);
+              }
             } else if (e.key === "Escape") {
               setOpen(false);
             }
           }}
-          placeholder="Query inventory — try 'cacao' or 'alpaca'"
-          aria-label="Search products"
-          autoComplete="off"
-          className="w-full bg-transparent border-none outline-none text-foreground font-mono text-sm py-2.5 px-2 placeholder:text-muted-foreground/60"
+          placeholder="Search millions of products..."
+          className="w-full h-10 pl-10 pr-12 bg-bark border border-edge rounded-none text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue/50 transition-all"
         />
-        <div className="pr-3 flex items-center gap-2 text-muted-foreground">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-neon-blue transition-colors">
           {loading ? (
-            <Loader2 className="size-3.5 animate-spin text-neon-blue" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Search className="size-3.5" />
+            <Search className="size-4" />
           )}
-          <kbd className="hidden md:inline text-[10px] font-mono px-1.5 py-0.5 border border-edge bg-bark">↵</kbd>
+        </div>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center gap-2">
+          {loading ? null : <kbd className="hidden md:inline text-[10px] font-mono px-1.5 py-0.5 border border-edge bg-bark">↵</kbd>}
         </div>
       </div>
 
@@ -104,19 +122,27 @@ export const SearchBar = () => {
           ) : (
             suggestions.map((s, i) => (
               <button
-                key={s + i}
+                key={s.id || `term-${i}`}
                 role="option"
                 aria-selected={i === active}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => submit(s)}
-                className={`w-full text-left px-3 py-2 text-sm font-mono flex items-center gap-2 border-l-2 transition-colors ${
+                className={`w-full text-left px-3 py-2 text-sm font-mono flex items-center justify-between gap-2 border-l-2 transition-colors ${
                   i === active
                     ? "border-neon-blue bg-neon-blue/5 text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Search className="size-3 text-neon-blue/60" />
-                <span>{s}</span>
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Search className="size-3 text-neon-blue/60 shrink-0" />
+                  <span className="truncate">{s.name}</span>
+                </div>
+                {/* Optional: Show sales/popularity as a nice badge since the backend returns it now */}
+                {s.sales > 0 && (
+                  <span className="text-[10px] text-muted-foreground shrink-0 bg-bark-light px-1.5 py-0.5 rounded">
+                    {s.sales.toLocaleString()} sold
+                  </span>
+                )}
               </button>
             ))
           )}
