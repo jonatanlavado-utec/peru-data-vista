@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap, Database, Loader2, Send } from "lucide-react";
+import { Search, ShieldAlert, BarChart3, ListOrdered, Home, Zap, Database, Loader2, Send } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { useOptimized } from "@/lib/optimized-context";
 import { getInitStatus, startInitAsync, getSystemStats, type SystemStats } from "@/lib/api";
@@ -14,12 +14,9 @@ const NAV = [
   { to: "/fraud", label: "Fraud.Sys", icon: ShieldAlert, color: "text-neon-green" },
   { to: "/benchmark", label: "Bench.Lab", icon: BarChart3, color: "text-warning" },
   { to: "/priority", label: "Queue.Ops", icon: ListOrdered, color: "text-neon-magenta" },
-  { to: "/lsm", label: "LSM_Tree.Log", icon: GitBranch, color: "text-neon-blue" },
 ];
 
 export const AppLayout = () => {
-  const [uptime, setUptime] = useState(99.998);
-  const [latency, setLatency] = useState(14.2);
   const location = useLocation();
   const { optimized, toggle } = useOptimized();
   const [initStatus, setInitStatus] = useState<{
@@ -74,11 +71,6 @@ export const AppLayout = () => {
 
   useEffect(() => {
     handleInit();
-    const id = setInterval(() => {
-      setLatency(+(10 + Math.random() * 12).toFixed(1));
-      setUptime(+(99.95 + Math.random() * 0.049).toFixed(3));
-    }, 4000);
-    return () => clearInterval(id);
   }, []);
 
   // Poll system stats for real-time counts
@@ -184,17 +176,6 @@ export const AppLayout = () => {
               <span className={`size-1.5 rounded-full ${optimized ? "bg-neon-magenta animate-pulse" : "bg-muted-foreground/40"}`} />
               <span className="hidden sm:inline">{optimized ? "ON" : "OFF"}</span>
             </button>
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 border border-edge bg-bark-light text-neon-green">
-              <Activity className="size-3" />
-              <span>UPTIME {uptime}%</span>
-            </div>
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 border border-edge bg-bark-light text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-neon-blue animate-pulse" />
-              <span>{latency}ms</span>
-            </div>
-            <div className="size-8 bg-bark-light border border-edge flex items-center justify-center text-neon-blue text-xs font-mono">
-              USR
-            </div>
           </div>
         </div>
 
