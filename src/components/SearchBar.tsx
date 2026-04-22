@@ -58,9 +58,7 @@ export const SearchBar = () => {
   const submit = (suggestion: AutocompleteItem) => {
     setQ(suggestion.name);
     setOpen(false);
-    // Optional: navigate directly to the product using suggestion.id
-    // navigate(`/product/${suggestion.id}`);
-    navigate(`/?q=${encodeURIComponent(suggestion.name)}`);
+    navigate(`/search?q=${encodeURIComponent(suggestion.name)}`);
   };
 
   return (
