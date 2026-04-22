@@ -29,22 +29,33 @@ export const AppLayout = () => {
   } | null>(null);
   const [initLoading, setInitLoading] = useState(false);
 
-  // Poll init status (every 500ms for real-time feel)
+  // Poll init status only while running or not yet initialized
   useEffect(() => {
     let alive = true;
+    let intervalId: number;
+
     const poll = async () => {
       try {
         const status = await getInitStatus();
-        if (alive) setInitStatus(status);
+        if (!alive) return;
+        setInitStatus(status);
+
+        // Stop polling once initialized and not running
+        if (status.initialized && !status.running && intervalId) {
+          clearInterval(intervalId);
+          intervalId = 0;
+        }
       } catch {
         // ignore
       }
     };
+
     poll();
-    const id = setInterval(poll, 1000);
+    intervalId = setInterval(poll, 1000);
+
     return () => {
       alive = false;
-      clearInterval(id);
+      if (intervalId) clearInterval(intervalId);
     };
   }, []);
 
