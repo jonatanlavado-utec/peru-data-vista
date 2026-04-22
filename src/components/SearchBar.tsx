@@ -87,7 +87,7 @@ export const SearchBar = () => {
               } else if (q.trim()) {
                 // Submit raw query if nothing is selected
                 setOpen(false);
-                navigate(`/?q=${encodeURIComponent(q.trim())}`);
+                navigate(`/search?q=${encodeURIComponent(q.trim())}`);
               }
             } else if (e.key === "Escape") {
               setOpen(false);
