@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap, Database, Loader2 } from "lucide-react";
+import { Search, ShieldAlert, BarChart3, ListOrdered, GitBranch, Home, Activity, Zap, Database, Loader2, Send } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { useOptimized } from "@/lib/optimized-context";
 import { getInitStatus, startInitAsync } from "@/lib/api";
@@ -10,6 +10,7 @@ const INIT_TRANSACTIONS = parseInt(import.meta.env.VITE_INIT_TRANSACTIONS || "10
 
 const NAV = [
   { to: "/", label: "Discover", icon: Home, end: true },
+  { to: "/ingest", label: "Ingest.Console", icon: Send, color: "text-neon-magenta" },
   { to: "/fraud", label: "Fraud.Sys", icon: ShieldAlert, color: "text-neon-green" },
   { to: "/benchmark", label: "Bench.Lab", icon: BarChart3, color: "text-warning" },
   { to: "/priority", label: "Queue.Ops", icon: ListOrdered, color: "text-neon-magenta" },
@@ -32,7 +33,7 @@ export const AppLayout = () => {
   // Poll init status only while running or not yet initialized
   useEffect(() => {
     let alive = true;
-    let intervalId: number;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const poll = async () => {
       try {
@@ -43,7 +44,7 @@ export const AppLayout = () => {
         // Stop polling once initialized and not running
         if (status.initialized && !status.running && intervalId) {
           clearInterval(intervalId);
-          intervalId = 0;
+          intervalId = null;
         }
       } catch {
         // ignore

@@ -11,6 +11,7 @@ import FraudPage from "./pages/FraudPage.tsx";
 import BenchmarkPage from "./pages/BenchmarkPage.tsx";
 import PriorityPage from "./pages/PriorityPage.tsx";
 import LsmPage from "./pages/LsmPage.tsx";
+import IngestPage from "./pages/IngestPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/benchmark" element={<BenchmarkPage />} />
             <Route path="/priority" element={<PriorityPage />} />
             <Route path="/lsm" element={<LsmPage />} />
+            <Route path="/ingest" element={<IngestPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -221,13 +221,19 @@ export const BENCHMARK_COMPARISONS: BenchmarkComparison[] = RECIPES.map((r) => {
     memMb: jitter(r.baseMem(n)),
   }));
   const avg = (arr: number[]) => +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(3);
+  const optPointsFull = optPoints.map((p) => ({ ...p, time: p.timeMs }));
+  const basePointsFull = basePoints.map((p) => ({ ...p, time: p.timeMs }));
   return {
+    id: `cmp-${r.structure.toLowerCase().replace(/\s+/g, "-")}`,
     structure: r.structure,
     useCase: r.useCase,
+    title: r.structure,
+    description: r.useCase,
+    metric: "time_ms+mem_mb",
     baselineName: r.baselineName,
     series: [
-      { label: r.structure, kind: "optimized", points: optPoints },
-      { label: r.baselineName, kind: "baseline", points: basePoints },
+      { label: r.structure, kind: "optimized", points: optPointsFull },
+      { label: r.baselineName, kind: "baseline", points: basePointsFull },
     ],
     summary: {
       optimized: {
@@ -246,15 +252,19 @@ const REGIONS = ["Lima", "Cusco", "Arequipa", "Loreto", "Trujillo", "Piura", "Ta
 const SLAS: PriorityOrder["sla"][] = ["P0", "P1", "P2", "P3"];
 
 export const PRIORITY_ORDERS: PriorityOrder[] = Array.from({ length: 80 })
-  .map((_, i) => ({
-    id: `ord_${(0x77cf + i * 17).toString(16).toUpperCase()}`,
-    priority: Math.floor(Math.random() * 100) + 1,
-    customer: ["Lucía Q.", "Carlos M.", "Renata V.", "Diego H.", "Ana P.", "Jorge R.", "Sofía B."][i % 7],
-    amount: +(50 + Math.random() * 4500).toFixed(2),
-    timestamp: new Date(Date.now() - i * 1000 * 60 * 3.4).toISOString(),
-    region: REGIONS[i % REGIONS.length],
-    sla: SLAS[Math.min(3, Math.floor(Math.random() * 4))],
-  }))
+  .map((_, i) => {
+    const amount = +(50 + Math.random() * 4500).toFixed(2);
+    return {
+      id: `ord_${(0x77cf + i * 17).toString(16).toUpperCase()}`,
+      priority: Math.floor(Math.random() * 100) + 1,
+      customer: ["Lucía Q.", "Carlos M.", "Renata V.", "Diego H.", "Ana P.", "Jorge R.", "Sofía B."][i % 7],
+      amount,
+      total: amount,
+      timestamp: new Date(Date.now() - i * 1000 * 60 * 3.4).toISOString(),
+      region: REGIONS[i % REGIONS.length],
+      sla: SLAS[Math.min(3, Math.floor(Math.random() * 4))],
+    };
+  })
   .sort((a, b) => a.priority - b.priority);
 
 const LSM_DETAILS = [
