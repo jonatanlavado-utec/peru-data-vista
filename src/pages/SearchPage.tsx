@@ -13,7 +13,7 @@ const SearchPage = () => {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useEffect(() => {console.log("SearchPage q =", q);
     document.title = `"${q}" — AmazonPe search`;
     let alive = true;
     setLoading(true);

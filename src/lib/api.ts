@@ -80,19 +80,22 @@ export async function getProducts(page = 1, pageSize = 12) {
 }
 
 // GET /api/search?q=&optimized=
-export function searchProducts(q: string) {
+export async function searchProducts(q: string) {
   const optimized = getOptimizedFlag();
-  return mockFetch(`/search?q=${encodeURIComponent(q)}&optimized=${optimized}`, () => {
-    const term = q.trim().toLowerCase();
-    if (!term) return { items: [] as Product[], q, optimized };
-    const items = PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.sku.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term),
-    );
-    return { items, q, optimized };
-  });
+  console.log("calling searchProducts with", q);
+  const response = await fetch(
+    `/api/search?q=${encodeURIComponent(q)}&optimized=${optimized}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Search failed: ${response.status}`);
+  }
+
+  return await response.json() as {
+    items: Product[];
+    q: string;
+    optimized: boolean;
+  };
 }
 
 // GET /api/autocomplete?q=&optimized=
